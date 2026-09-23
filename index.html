@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard Daftar Rumah Sakit</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --muted2: #94a3b8;
+    --blue: #2563eb;
+    --teal: #0d9488;
+    --amber: #d97706;
+    --violet: #7c3aed;
+    --grid: #e2e8f0;
+    --card: #ffffff;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #ffffff;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+  header { margin-bottom: 20px; }
+  header h1 { font-size: clamp(20px, 3vw, 28px); margin: 0 0 6px; font-weight: 800; letter-spacing: -0.02em; }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 22px 0; }
+  @media (max-width: 800px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; border-top: 3px solid var(--accent, var(--blue)); }
+  .kpi .label { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+  .kpi .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--accent, var(--blue)); }
+  .kpi .sub { font-size: 12px; color: var(--muted2); margin-top: 2px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px; }
+  .card h2 { font-size: 14.5px; margin: 0 0 12px; font-weight: 700; }
+  .chart-holder { position: relative; height: 300px; }
+
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+  .search-box {
+    flex: 1 1 220px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    outline: none;
+    color: var(--text);
+    background: #fff;
+  }
+  .search-box:focus { border-color: var(--blue); }
+  .chip {
+    padding: 7px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #f8fafc;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .chip.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .result-count { font-size: 12.5px; color: var(--muted2); margin-bottom: 10px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  thead th {
+    text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--muted); border-bottom: 1px solid var(--border); padding: 8px 10px; position: sticky; top: 0; background: var(--card);
+  }
+  tbody td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; }
+  tbody tr:hover { background: #f8fafc; }
+  .badge {
+    display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  }
+  .table-scroll { max-height: 560px; overflow-y: auto; overflow-x: auto; border-radius: 10px; }
+  .no-result { text-align: center; padding: 30px; color: var(--muted2); font-size: 13.5px; }
+
+  footer { margin-top: 26px; text-align: center; color: var(--muted2); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Dashboard Daftar Rumah Sakit</h1>
+    <p>Rekapitulasi &amp; pencarian fasilitas kesehatan jejaring</p>
+  </header>
+
+  <section class="kpis">
+    <div class="kpi" style="--accent: var(--blue)">
+      <div class="label">TOTAL FASILITAS</div>
+      <div class="value" id="kpiTotal">118</div>
+      <div class="sub">Terdaftar</div>
+    </div>
+    <div class="kpi" style="--accent: var(--teal)">
+      <div class="label">RUMAH SAKIT</div>
+      <div class="value">109</div>
+      <div class="sub">92,4% dari total</div>
+    </div>
+    <div class="kpi" style="--accent: var(--amber)">
+      <div class="label">KLINIK</div>
+      <div class="value">3</div>
+      <div class="sub">Fasilitas klinik</div>
+    </div>
+    <div class="kpi" style="--accent: var(--violet)">
+      <div class="label">JENIS LAINNYA</div>
+      <div class="value">6</div>
+      <div class="sub">Puskesmas, Balai, Lab, dll</div>
+    </div>
+  </section>
+
+  <div class="card">
+    <h2>Distribusi Jenis Fasilitas</h2>
+    <div class="chart-holder" style="height:260px;"><canvas id="chartJenis"></canvas></div>
+  </div>
+
+  <div class="card">
+    <h2>Cari &amp; Filter Fasilitas</h2>
+    <div class="controls">
+      <input id="searchBox" class="search-box" type="text" placeholder="Cari nama rumah sakit / klinik / kota...">
+    </div>
+    <div class="controls" id="chipRow"></div>
+    <div class="result-count" id="resultCount"></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th style="width:50px;">No</th><th>Nama Fasilitas</th><th style="width:170px;">Jenis</th></tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="no-result" id="noResult" style="display:none;">Tidak ada fasilitas yang cocok.</div>
+    </div>
+  </div>
+
+  <footer>Sumber: daftar-rumah-sakit.xlsx &middot; Total baris data: 118</footer>
+</div>
+
+<script>
+const DATA = [{"No": 1, "Nama Rumah Sakit": "Balai Besar Kesehatan Paru Makassar", "Jenis": "Balai Kesehatan"}, {"No": 2, "Nama Rumah Sakit": "Esha Skin Center Karawang", "Jenis": "Lainnya"}, {"No": 3, "Nama Rumah Sakit": "Klinik Cerebellum", "Jenis": "Klinik"}, {"No": 4, "Nama Rumah Sakit": "Klinik JEC ORBITA", "Jenis": "Klinik"}, {"No": 5, "Nama Rumah Sakit": "Klinik Mata Nurul Bulukumba", "Jenis": "Klinik"}, {"No": 6, "Nama Rumah Sakit": "Puskesmas Jumpandang Baru", "Jenis": "Puskesmas"}, {"No": 7, "Nama Rumah Sakit": "RS Akademis Jaury Jusuf Putra", "Jenis": "Rumah Sakit"}, {"No": 8, "Nama Rumah Sakit": "RS Amaliah Bontang", "Jenis": "Rumah Sakit"}, {"No": 9, "Nama Rumah Sakit": "RS Andi Makkasau Parepare", "Jenis": "Rumah Sakit"}, {"No": 10, "Nama Rumah Sakit": "RS Bahagia", "Jenis": "Rumah Sakit"}, {"No": 11, "Nama Rumah Sakit": "RS Bhayangkara", "Jenis": "Rumah Sakit"}, {"No": 12, "Nama Rumah Sakit": "RS DATU PANCAITANA BONE", "Jenis": "Rumah Sakit"}, {"No": 13, "Nama Rumah Sakit": "RS Hamawaki", "Jenis": "Rumah Sakit"}, {"No": 14, "Nama Rumah Sakit": "RS Hasri Ainun Habibie Kota Parepare", "Jenis": "Rumah Sakit"}, {"No": 15, "Nama Rumah Sakit": "RS Hikmah", "Jenis": "Rumah Sakit"}, {"No": 16, "Nama Rumah Sakit": "RS Ibnu Sina", "Jenis": "Rumah Sakit"}, {"No": 17, "Nama Rumah Sakit": "RS Islam Faisal", "Jenis": "Rumah Sakit"}, {"No": 18, "Nama Rumah Sakit": "RS Jayapura", "Jenis": "Rumah Sakit"}, {"No": 19, "Nama Rumah Sakit": "RS La Palaloi Maros", "Jenis": "Rumah Sakit"}, {"No": 20, "Nama Rumah Sakit": "RS Labuha Kab. Halmahera Selatan", "Jenis": "Rumah Sakit"}, {"No": 21, "Nama Rumah Sakit": "RS Lamaddukelleng", "Jenis": "Rumah Sakit"}, {"No": 22, "Nama Rumah Sakit": "RS LNG Badak Bontang", "Jenis": "Rumah Sakit"}, {"No": 23, "Nama Rumah Sakit": "RS Mamuju", "Jenis": "Rumah Sakit"}, {"No": 24, "Nama Rumah Sakit": "RS Marina Permata Batulicin Kab. Tanah Bumbu", "Jenis": "Rumah Sakit"}, {"No": 25, "Nama Rumah Sakit": "RS Mata Makassar", "Jenis": "Rumah Sakit"}, {"No": 26, "Nama Rumah Sakit": "RS Medika Utama, Manggar Balikpapan", "Jenis": "Rumah Sakit"}, {"No": 27, "Nama Rumah Sakit": "RS Pelamonia", "Jenis": "Rumah Sakit"}, {"No": 28, "Nama Rumah Sakit": "RS PKT Prima Sangatta, Kalimantan Timur", "Jenis": "Rumah Sakit"}, {"No": 29, "Nama Rumah Sakit": "RS Pratama Sebatik", "Jenis": "Rumah Sakit"}, {"No": 30, "Nama Rumah Sakit": "RS PTN Universitas Hasanuddin", "Jenis": "Rumah Sakit"}, {"No": 31, "Nama Rumah Sakit": "RS Siloam Labuan Bajo", "Jenis": "Rumah Sakit"}, {"No": 32, "Nama Rumah Sakit": "RS Stella Maris", "Jenis": "Rumah Sakit"}, {"No": 33, "Nama Rumah Sakit": "RS Weda Halmahera Tengah", "Jenis": "Rumah Sakit"}, {"No": 34, "Nama Rumah Sakit": "RS Wonomulyo Kab. Polman", "Jenis": "Rumah Sakit"}, {"No": 35, "Nama Rumah Sakit": "RS. Mitra Husada", "Jenis": "Rumah Sakit"}, {"No": 36, "Nama Rumah Sakit": "Rs. Nasional Diponegoro Semarang", "Jenis": "Rumah Sakit"}, {"No": 37, "Nama Rumah Sakit": "RS. Siloam", "Jenis": "Rumah Sakit"}, {"No": 38, "Nama Rumah Sakit": "RS. Tarakan Jakarta", "Jenis": "Rumah Sakit"}, {"No": 39, "Nama Rumah Sakit": "RSIA Sitti Khadijah I", "Jenis": "Rumah Sakit"}, {"No": 40, "Nama Rumah Sakit": "RSJ Sofifi Maluku Utara", "Jenis": "Rumah Sakit"}, {"No": 41, "Nama Rumah Sakit": "RSKD Dadi Provinsi Sulsel", "Jenis": "Rumah Sakit"}, {"No": 42, "Nama Rumah Sakit": "RSKDIA Pertiwi", "Jenis": "Rumah Sakit"}, {"No": 43, "Nama Rumah Sakit": "RSKDIA St Fatimah", "Jenis": "Rumah Sakit"}, {"No": 44, "Nama Rumah Sakit": "RSPAD Gatot Subroto Jakarta", "Jenis": "Rumah Sakit"}, {"No": 45, "Nama Rumah Sakit": "RSU Kota Tidore Kepulauan", "Jenis": "Rumah Sakit"}, {"No": 46, "Nama Rumah Sakit": "RSUD Aeramo Kab. Nagekeo", "Jenis": "Rumah Sakit"}, {"No": 47, "Nama Rumah Sakit": "RSUD Alor", "Jenis": "Rumah Sakit"}, {"No": 48, "Nama Rumah Sakit": "RSUD Anuntaloko Parigi", "Jenis": "Rumah Sakit"}, {"No": 49, "Nama Rumah Sakit": "RSUD Anwar Makkatutu Kab. Bantaeng", "Jenis": "Rumah Sakit"}, {"No": 50, "Nama Rumah Sakit": "RSUD Bahteramas Prov. Sulawesi Tenggara", "Jenis": "Rumah Sakit"}, {"No": 51, "Nama Rumah Sakit": "RSUD Banggai Kab. Luwuk Banggai", "Jenis": "Rumah Sakit"}, {"No": 52, "Nama Rumah Sakit": "RSUD Banggai Laut", "Jenis": "Rumah Sakit"}, {"No": 53, "Nama Rumah Sakit": "RSUD Batara Siang Pangkep", "Jenis": "Rumah Sakit"}, {"No": 54, "Nama Rumah Sakit": "RSUD Bau Bau", "Jenis": "Rumah Sakit"}, {"No": 55, "Nama Rumah Sakit": "RSUD Benyamin Guluh Kolaka", "Jenis": "Rumah Sakit"}, {"No": 56, "Nama Rumah Sakit": "RSUD Borong Manggarai Timur", "Jenis": "Rumah Sakit"}, {"No": 57, "Nama Rumah Sakit": "RSUD Bumi Panua Pohuwato Gorontalo", "Jenis": "Rumah Sakit"}, {"No": 58, "Nama Rumah Sakit": "RSUD Buol", "Jenis": "Rumah Sakit"}, {"No": 59, "Nama Rumah Sakit": "RSUD Daya", "Jenis": "Rumah Sakit"}, {"No": 60, "Nama Rumah Sakit": "RSUD Dayaku Raja Kota Bangun", "Jenis": "Rumah Sakit"}, {"No": 61, "Nama Rumah Sakit": "RSUD Ende Provinsi Nusa Tenggara Timur", "Jenis": "Rumah Sakit"}, {"No": 62, "Nama Rumah Sakit": "RSUD H. Andi Sultan Daeng Radja", "Jenis": "Rumah Sakit"}, {"No": 63, "Nama Rumah Sakit": "RSUD H. Damanhuri Kab. Barabai", "Jenis": "Rumah Sakit"}, {"No": 64, "Nama Rumah Sakit": "RSUD H. Padjonga Dg. Ngalle Takalar", "Jenis": "Rumah Sakit"}, {"No": 65, "Nama Rumah Sakit": "RSUD H.A. Sultan Dg. Radja Kab. Bulukumba", "Jenis": "Rumah Sakit"}, {"No": 66, "Nama Rumah Sakit": "RSUD H.M. Djafar Harun Kolaka", "Jenis": "Rumah Sakit"}, {"No": 67, "Nama Rumah Sakit": "RSUD Haji", "Jenis": "Rumah Sakit"}, {"No": 68, "Nama Rumah Sakit": "RSUD Hajjah Andi Depu Polman", "Jenis": "Rumah Sakit"}, {"No": 69, "Nama Rumah Sakit": "RSUD Hanau", "Jenis": "Rumah Sakit"}, {"No": 70, "Nama Rumah Sakit": "RSUD Hj. Zubaeda Bantilan Kab. Tolitoli", "Jenis": "Rumah Sakit"}, {"No": 71, "Nama Rumah Sakit": "RSUD I Lagaligo Wotu Luwu Timur", "Jenis": "Rumah Sakit"}, {"No": 72, "Nama Rumah Sakit": "RSUD Jaraga Sasameh Barito", "Jenis": "Rumah Sakit"}, {"No": 73, "Nama Rumah Sakit": "RSUD Kab. Buton Tengah", "Jenis": "Rumah Sakit"}, {"No": 74, "Nama Rumah Sakit": "RSUD KH. Hayyung Kab. Selayar", "Jenis": "Rumah Sakit"}, {"No": 75, "Nama Rumah Sakit": "RSUD Kolonodale", "Jenis": "Rumah Sakit"}, {"No": 76, "Nama Rumah Sakit": "RSUD Kondosopata Mamasa", "Jenis": "Rumah Sakit"}, {"No": 77, "Nama Rumah Sakit": "RSUD Kuala Pembuang Kab. Seruyan", "Jenis": "Rumah Sakit"}, {"No": 78, "Nama Rumah Sakit": "RSUD La Patarai Barru", "Jenis": "Rumah Sakit"}, {"No": 79, "Nama Rumah Sakit": "RSUD Labuang Baji", "Jenis": "Rumah Sakit"}, {"No": 80, "Nama Rumah Sakit": "RSUD Lakipadada", "Jenis": "Rumah Sakit"}, {"No": 81, "Nama Rumah Sakit": "RSUD Lanto Daeng Pasewang Kab. Jeneponto", "Jenis": "Rumah Sakit"}, {"No": 82, "Nama Rumah Sakit": "RSUD Latemmamala Soppeng", "Jenis": "Rumah Sakit"}, {"No": 83, "Nama Rumah Sakit": "RSUD Maba Halmahera Timur", "Jenis": "Rumah Sakit"}, {"No": 84, "Nama Rumah Sakit": "RSUD Malinau", "Jenis": "Rumah Sakit"}, {"No": 85, "Nama Rumah Sakit": "RSUD Masamba", "Jenis": "Rumah Sakit"}, {"No": 86, "Nama Rumah Sakit": "RSUD Massenrempulu Enrekang", "Jenis": "Rumah Sakit"}, {"No": 87, "Nama Rumah Sakit": "RSUD Mokopido Toli-Toli", "Jenis": "Rumah Sakit"}, {"No": 88, "Nama Rumah Sakit": "RSUD Mokoyurli Kab Buol", "Jenis": "Rumah Sakit"}, {"No": 89, "Nama Rumah Sakit": "RSUD Morotai", "Jenis": "Rumah Sakit"}, {"No": 90, "Nama Rumah Sakit": "RSUD Morowali", "Jenis": "Rumah Sakit"}, {"No": 91, "Nama Rumah Sakit": "RSUD Nunukan", "Jenis": "Rumah Sakit"}, {"No": 92, "Nama Rumah Sakit": "RSUD Palopo", "Jenis": "Rumah Sakit"}, {"No": 93, "Nama Rumah Sakit": "RSUD Pasarwajo Kab. Buton Provinsi Sulawesi Tenggara", "Jenis": "Rumah Sakit"}, {"No": 94, "Nama Rumah Sakit": "RSUD Pongtiku Kab Toraja Utara", "Jenis": "Rumah Sakit"}, {"No": 95, "Nama Rumah Sakit": "RSUD Ratu Aji Putri Botung, Penajam Paser Utara, Kalimantan Timur", "Jenis": "Rumah Sakit"}, {"No": 96, "Nama Rumah Sakit": "RSUD Salabangkapaku Morowali", "Jenis": "Rumah Sakit"}, {"No": 97, "Nama Rumah Sakit": "RSUD Sinjai", "Jenis": "Rumah Sakit"}, {"No": 98, "Nama Rumah Sakit": "RSUD SINJAI", "Jenis": "Rumah Sakit"}, {"No": 99, "Nama Rumah Sakit": "RSUD Siwa Kab. Wajo", "Jenis": "Rumah Sakit"}, {"No": 100, "Nama Rumah Sakit": "RSUD Syech Yusuf Gowa", "Jenis": "Rumah Sakit"}, {"No": 101, "Nama Rumah Sakit": "RSUD Tani dan Nelayan Kab Boalemo", "Jenis": "Rumah Sakit"}, {"No": 102, "Nama Rumah Sakit": "RSUD Tenriawaru Bone", "Jenis": "Rumah Sakit"}, {"No": 103, "Nama Rumah Sakit": "RSUD Ternate", "Jenis": "Rumah Sakit"}, {"No": 104, "Nama Rumah Sakit": "RSUD Tobelo", "Jenis": "Rumah Sakit"}, {"No": 105, "Nama Rumah Sakit": "RSUD Undata Palu", "Jenis": "Rumah Sakit"}, {"No": 106, "Nama Rumah Sakit": "RSUD Wakatobi", "Jenis": "Rumah Sakit"}, {"No": 107, "Nama Rumah Sakit": "RSUD Wotu, Luwu Timur", "Jenis": "Rumah Sakit"}, {"No": 108, "Nama Rumah Sakit": "RSUD. Majene", "Jenis": "Rumah Sakit"}, {"No": 109, "Nama Rumah Sakit": "RSUP Dr. Wahidin Sudirohusodo", "Jenis": "Rumah Sakit"}, {"No": 110, "Nama Rumah Sakit": "RSUP Tajuddin Chalid", "Jenis": "Rumah Sakit"}, {"No": 111, "Nama Rumah Sakit": "RSUP. Dr. Hasan Sadikin Bandung", "Jenis": "Rumah Sakit"}, {"No": 112, "Nama Rumah Sakit": "RSUP. Prof. Dr. R.D Kandou Manado", "Jenis": "Rumah Sakit"}, {"No": 113, "Nama Rumah Sakit": "Rumah Sakit Islam Sultan Agung Semarang", "Jenis": "Rumah Sakit"}, {"No": 114, "Nama Rumah Sakit": "Rumah Sakit Sebuku Nunukan", "Jenis": "Rumah Sakit"}, {"No": 115, "Nama Rumah Sakit": "Sentra Diagnostik Patologi Makassar", "Jenis": "Laboratorium"}, {"No": 116, "Nama Rumah Sakit": "Unit Pelayanan Kesehatan Kulit, Kelamin dan Kosmetika Provinsi Sulsel", "Jenis": "UPTD / Unit Pelayanan"}, {"No": 117, "Nama Rumah Sakit": "Universitas Kebangsaan Malaysia", "Jenis": "Institusi Pendidikan"}, {"No": 118, "Nama Rumah Sakit": "UPTD RS Regional La Mappapenning Provinsi Sulawesi Selatan", "Jenis": "Rumah Sakit"}];
+
+const JENIS_COLORS = {
+  'Rumah Sakit': '#2563eb',
+  'Klinik': '#0d9488',
+  'Puskesmas': '#d97706',
+  'Balai Kesehatan': '#7c3aed',
+  'Laboratorium': '#ec4899',
+  'UPTD / Unit Pelayanan': '#06b6d4',
+  'Institusi Pendidikan': '#84cc16',
+  'Lainnya': '#94a3b8'
+};
+
+let activeType = 'Semua';
+let searchTerm = '';
+
+function renderChips() {
+  const counts = {};
+  DATA.forEach(d => counts[d.Jenis] = (counts[d.Jenis] || 0) + 1);
+  const types = ['Semua', ...Object.keys(counts).sort((a,b) => counts[b]-counts[a])];
+  const row = document.getElementById('chipRow');
+  row.innerHTML = '';
+  types.forEach(t => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (t === activeType ? ' active' : '');
+    chip.textContent = t === 'Semua' ? `Semua (${DATA.length})` : `${t} (${counts[t]})`;
+    chip.onclick = () => { activeType = t; renderChips(); renderTable(); };
+    row.appendChild(chip);
+  });
+}
+
+function renderTable() {
+  const body = document.getElementById('tableBody');
+  const noResult = document.getElementById('noResult');
+  const term = searchTerm.trim().toLowerCase();
+  const filtered = DATA.filter(d => {
+    const typeOk = activeType === 'Semua' || d.Jenis === activeType;
+    const searchOk = !term || d['Nama Rumah Sakit'].toLowerCase().includes(term);
+    return typeOk && searchOk;
+  });
+
+  document.getElementById('resultCount').textContent = `Menampilkan ${filtered.length} dari ${DATA.length} fasilitas`;
+
+  if (filtered.length === 0) {
+    body.innerHTML = '';
+    noResult.style.display = 'block';
+    return;
+  }
+  noResult.style.display = 'none';
+
+  body.innerHTML = filtered.map(d => {
+    const color = JENIS_COLORS[d.Jenis] || '#94a3b8';
+    return `<tr>
+      <td>${d.No}</td>
+      <td>${d['Nama Rumah Sakit']}</td>
+      <td><span class="badge" style="background:${color}22;color:${color};">${d.Jenis}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('searchBox').addEventListener('input', (e) => {
+  searchTerm = e.target.value;
+  renderTable();
+});
+
+renderChips();
+renderTable();
+
+try {
+  const counts = {};
+  DATA.forEach(d => counts[d.Jenis] = (counts[d.Jenis] || 0) + 1);
+  const labels = Object.keys(counts).sort((a,b) => counts[b]-counts[a]);
+  const values = labels.map(l => counts[l]);
+  const colors = labels.map(l => JENIS_COLORS[l] || '#94a3b8');
+
+  Chart.defaults.color = '#0f172a';
+  Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+  new Chart(document.getElementById('chartJenis'), {
+    type: 'doughnut',
+    data: {
+      labels: labels.map((l,i) => `${l} (${values[i]})`),
+      datasets: [{
+        data: values,
+        backgroundColor: colors,
+        borderColor: '#ffffff',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '60%',
+      plugins: {
+        legend: { position: 'right', labels: { boxWidth: 12, padding: 12, font: { size: 11.5 } } }
+      }
+    }
+  });
+} catch (e) {
+  console.error('Chart render error:', e);
+}
+</script>
+</body>
+</html>
